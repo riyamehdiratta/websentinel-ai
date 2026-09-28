@@ -45,7 +45,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="3" name="conv1_out/WithoutBiases" type="Convolution" version="opset1">
+		<layer id="3" name="c1/WithoutBiases" type="Convolution" version="opset1">
 			<data strides="2, 2" dilations="1, 1" pads_begin="2, 2" pads_end="2, 2" auto_pad="explicit" />
 			<input>
 				<port id="0" precision="FP32">
@@ -62,7 +62,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="conv1_out">
+				<port id="2" precision="FP32" names="c1">
 					<dim>1</dim>
 					<dim>16</dim>
 					<dim>112</dim>
@@ -70,7 +70,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="4" name="relu1_out" type="ReLU" version="opset1">
+		<layer id="4" name="r1" type="ReLU" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>1</dim>
@@ -80,7 +80,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="1" precision="FP32" names="relu1_out">
+				<port id="1" precision="FP32" names="r1">
 					<dim>1</dim>
 					<dim>16</dim>
 					<dim>112</dim>
@@ -88,7 +88,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="5" name="pool1_out" type="MaxPool" version="opset8">
+		<layer id="5" name="p1" type="MaxPool" version="opset8">
 			<data strides="2, 2" dilations="1, 1" pads_begin="0, 0" pads_end="0, 0" kernel="2, 2" rounding_type="floor" auto_pad="explicit" index_element_type="i64" axis="0" />
 			<input>
 				<port id="0" precision="FP32">
@@ -99,7 +99,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="1" precision="FP32" names="pool1_out">
+				<port id="1" precision="FP32" names="p1">
 					<dim>1</dim>
 					<dim>16</dim>
 					<dim>56</dim>
@@ -146,7 +146,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="8" name="conv2_out/WithoutBiases" type="Convolution" version="opset1">
+		<layer id="8" name="c2/WithoutBiases" type="Convolution" version="opset1">
 			<data strides="2, 2" dilations="1, 1" pads_begin="1, 1" pads_end="1, 1" auto_pad="explicit" />
 			<input>
 				<port id="0" precision="FP32">
@@ -163,7 +163,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="conv2_out">
+				<port id="2" precision="FP32" names="c2">
 					<dim>1</dim>
 					<dim>32</dim>
 					<dim>28</dim>
@@ -171,7 +171,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="9" name="relu2_out" type="ReLU" version="opset1">
+		<layer id="9" name="r2" type="ReLU" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>1</dim>
@@ -181,7 +181,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="1" precision="FP32" names="relu2_out">
+				<port id="1" precision="FP32" names="r2">
 					<dim>1</dim>
 					<dim>32</dim>
 					<dim>28</dim>
@@ -189,7 +189,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="10" name="pool2_out" type="MaxPool" version="opset8">
+		<layer id="10" name="p2" type="MaxPool" version="opset8">
 			<data strides="2, 2" dilations="1, 1" pads_begin="0, 0" pads_end="0, 0" kernel="2, 2" rounding_type="floor" auto_pad="explicit" index_element_type="i64" axis="0" />
 			<input>
 				<port id="0" precision="FP32">
@@ -200,7 +200,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="1" precision="FP32" names="pool2_out">
+				<port id="1" precision="FP32" names="p2">
 					<dim>1</dim>
 					<dim>32</dim>
 					<dim>14</dim>
@@ -247,7 +247,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="13" name="conv3_out/WithoutBiases" type="Convolution" version="opset1">
+		<layer id="13" name="c3/WithoutBiases" type="Convolution" version="opset1">
 			<data strides="2, 2" dilations="1, 1" pads_begin="1, 1" pads_end="1, 1" auto_pad="explicit" />
 			<input>
 				<port id="0" precision="FP32">
@@ -264,7 +264,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="conv3_out">
+				<port id="2" precision="FP32" names="c3">
 					<dim>1</dim>
 					<dim>64</dim>
 					<dim>7</dim>
@@ -272,7 +272,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="14" name="relu3_out" type="ReLU" version="opset1">
+		<layer id="14" name="r3" type="ReLU" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>1</dim>
@@ -282,7 +282,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="1" precision="FP32" names="relu3_out">
+				<port id="1" precision="FP32" names="r3">
 					<dim>1</dim>
 					<dim>64</dim>
 					<dim>7</dim>
@@ -290,7 +290,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="15" name="Range_58" type="Const" version="opset1">
+		<layer id="15" name="Range_13478" type="Const" version="opset1">
 			<data element_type="i64" shape="2" offset="48480" size="16" />
 			<output>
 				<port id="0" precision="I64">
@@ -298,7 +298,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="16" name="gap_out" type="ReduceMean" version="opset1">
+		<layer id="16" name="gap" type="ReduceMean" version="opset1">
 			<data keep_dims="true" />
 			<input>
 				<port id="0" precision="FP32">
@@ -312,7 +312,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="gap_out">
+				<port id="2" precision="FP32" names="gap">
 					<dim>1</dim>
 					<dim>64</dim>
 					<dim>1</dim>
@@ -320,7 +320,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="17" name="Concat_378" type="Const" version="opset1">
+		<layer id="17" name="Concat_13611" type="Const" version="opset1">
 			<data element_type="i64" shape="2" offset="48496" size="16" />
 			<rt_info>
 				<attribute name="DisablePrecisionConversion" version="0" value="dynamic:f16" />
@@ -331,7 +331,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="18" name="flatten_out" type="Reshape" version="opset1">
+		<layer id="18" name="flat" type="Reshape" version="opset1">
 			<data special_zero="true" />
 			<input>
 				<port id="0" precision="FP32">
@@ -345,13 +345,13 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="flatten_out">
+				<port id="2" precision="FP32" names="flat">
 					<dim>1</dim>
 					<dim>64</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="19" name="Transpose_2042_compressed" type="Const" version="opset1">
+		<layer id="19" name="Transpose_15275_compressed" type="Const" version="opset1">
 			<data element_type="f16" shape="32, 64" offset="48512" size="4096" />
 			<output>
 				<port id="0" precision="FP16">
@@ -360,7 +360,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="20" name="Transpose_2042" type="Convert" version="opset1">
+		<layer id="20" name="Transpose_15275" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -378,7 +378,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="21" name="fc1_matmul" type="MatMul" version="opset1">
+		<layer id="21" name="m1" type="MatMul" version="opset1">
 			<data transpose_a="false" transpose_b="true" />
 			<input>
 				<port id="0" precision="FP32">
@@ -391,13 +391,13 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="fc1_add,fc1_matmul">
+				<port id="2" precision="FP32" names="a1,m1">
 					<dim>1</dim>
 					<dim>32</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="22" name="fc1_out" type="ReLU" version="opset1">
+		<layer id="22" name="r4" type="ReLU" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>1</dim>
@@ -405,13 +405,13 @@
 				</port>
 			</input>
 			<output>
-				<port id="1" precision="FP32" names="fc1_out">
+				<port id="1" precision="FP32" names="r4">
 					<dim>1</dim>
 					<dim>32</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="23" name="Transpose_2045_compressed" type="Const" version="opset1">
+		<layer id="23" name="Transpose_15278_compressed" type="Const" version="opset1">
 			<data element_type="f16" shape="5, 32" offset="52608" size="320" />
 			<output>
 				<port id="0" precision="FP16">
@@ -420,7 +420,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="24" name="Transpose_2045" type="Convert" version="opset1">
+		<layer id="24" name="Transpose_15278" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -438,7 +438,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="25" name="fc2_matmul" type="MatMul" version="opset1">
+		<layer id="25" name="m2" type="MatMul" version="opset1">
 			<data transpose_a="false" transpose_b="true" />
 			<input>
 				<port id="0" precision="FP32">
@@ -451,13 +451,13 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="fc2_matmul">
+				<port id="2" precision="FP32" names="m2">
 					<dim>1</dim>
 					<dim>5</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="26" name="Constant_2399_compressed" type="Const" version="opset1">
+		<layer id="26" name="Constant_15632_compressed" type="Const" version="opset1">
 			<data element_type="f16" shape="1, 5" offset="52928" size="10" />
 			<output>
 				<port id="0" precision="FP16">
@@ -466,7 +466,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="27" name="Constant_2399" type="Convert" version="opset1">
+		<layer id="27" name="Constant_15632" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -484,7 +484,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="28" name="fc2_out" type="Add" version="opset1">
+		<layer id="28" name="a2" type="Add" version="opset1">
 			<data auto_broadcast="numpy" />
 			<input>
 				<port id="0" precision="FP32">
@@ -497,7 +497,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="fc2_out">
+				<port id="2" precision="FP32" names="a2">
 					<dim>1</dim>
 					<dim>5</dim>
 				</port>

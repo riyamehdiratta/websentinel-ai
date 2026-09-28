@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
 """
-WebSentinel AI - Intel® OpenVINO™ Fast REST API & Web Server
-Provides high-speed endpoints for website health checks, visual defacement detection,
-domain typosquatting risk analysis, and Intel hardware benchmarks.
+WebSentinel AI - Intel® OpenVINO™ Production REST API Server
+Provides high-throughput asynchronous endpoints for real-time website uptime,
+deep visual defacement detection, DNS records, SSL certificates, and Intel hardware benchmarks.
 """
 
 import os
-from typing import Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
+import asyncio
+from typing import Optional, Dict, Any, List
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import openvino as ov
 
-from openvino_engine import OpenVINOEngine
+from database import Database
 from monitor_manager import MonitorManager
+from dns_service import DNSService
+from ssl_service import SSLService
+from openvino_engine import OpenVINOEngine
 
 app = FastAPI(
-    title="WebSentinel AI - Intel® OpenVINO™ Platform",
-    description="Next-Gen Website Uptime & Visual Health Guardian powered by Intel OpenVINO",
-    version="1.0.0"
+    title="WebSentinel AI - Intel® OpenVINO™ Production Platform",
+    description="Real-world Website Uptime & Visual Health Guardian powered by Intel OpenVINO",
+    version="2.0.0"
 )
 
-# Enable CORS for local testing and web embedding
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,8 +35,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+db = Database.get_instance()
 engine = OpenVINOEngine.get_instance()
-monitor = MonitorManager()
+monitor = MonitorManager.get_instance()
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -41,15 +45,12 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # -----------------
 # Request Models
 # -----------------
-class AddSiteRequest(BaseModel):
+class AddDomainRequest(BaseModel):
     domain: str
     name: Optional[str] = None
     category: Optional[str] = "General"
 
-class SimulateRequest(BaseModel):
-    state: str  # healthy, error_500, error_404, defaced, cloudflare, maintenance
-
-class DomainAnalyzeRequest(BaseModel):
+class DomainRiskRequest(BaseModel):
     domain: str
 
 # -----------------
@@ -64,7 +65,7 @@ async def serve_index():
 
 @app.get("/api/health")
 async def get_system_health():
-    """Returns Intel OpenVINO runtime status and hardware device details."""
+    """Returns Intel OpenVINO runtime status, available accelerators, and compiled models."""
     return {
         "status": "online",
         "platform": "Intel® OpenVINO™ Toolkit",
@@ -73,6 +74,7 @@ async def get_system_health():
         "available_devices": engine.available_devices,
         "device_info": engine.device_info,
         "models_loaded": {
+            "visual_feature_net (MobileNetV2)": engine.compiled_mobilenet is not None,
             "visual_health_net": engine.compiled_visual is not None,
             "domain_risk_net": engine.compiled_domain is not None,
             "latency_anomaly_net": engine.compiled_latency is not None
@@ -80,14 +82,12 @@ async def get_system_health():
     }
 
 @app.get("/api/sites")
-async def get_sites():
-    """Returns all monitored sites with current telemetry."""
+async def get_all_sites():
+    """Returns all monitored domains with real-time audit telemetry and screenshots."""
     sites = monitor.get_all_sites()
-    
-    # Compute aggregate telemetry
     total = len(sites)
     operational = sum(1 for s in sites if s.get("overall_status") == "operational")
-    threats = sum(1 for s in sites if s.get("overall_status") == "threat_detected")
+    threats = sum(1 for s in sites if s.get("overall_status") in ["threat_detected", "down", "waf_blocked"])
     down = sum(1 for s in sites if s.get("overall_status") == "down")
     uptime_pct = round((operational / total * 100), 1) if total > 0 else 100.0
 
@@ -104,60 +104,81 @@ async def get_sites():
     }
 
 @app.post("/api/sites")
-async def add_site(req: AddSiteRequest):
-    """Adds a new domain to real-time monitoring."""
+async def add_site(req: AddDomainRequest):
+    """Adds any real internet domain and immediately triggers a live full-stack audit."""
     if not req.domain or len(req.domain.strip()) < 3:
         raise HTTPException(status_code=400, detail="Invalid domain name")
-    new_site = monitor.add_site(req.domain, req.name, req.category)
-    return {"status": "success", "site": new_site}
+    
+    try:
+        new_site = monitor.add_site(req.domain, req.name, req.category)
+        return {"status": "success", "site": new_site}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/sites/{site_id}")
-async def delete_site(site_id: str):
-    """Deletes a site from monitoring."""
-    success = monitor.delete_site(site_id)
+@app.delete("/api/sites/{domain_id}")
+async def delete_site(domain_id: str):
+    """Deletes a domain from portfolio monitoring."""
+    success = monitor.delete_site(domain_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Site ID not found")
-    return {"status": "success", "message": f"Deleted {site_id}"}
+        raise HTTPException(status_code=404, detail="Domain ID not found")
+    return {"status": "success", "message": f"Deleted {domain_id}"}
 
-@app.post("/api/sites/{site_id}/simulate")
-async def simulate_site_state(site_id: str, req: SimulateRequest):
-    """Simulates an outage, defacement, or recovery on a monitored site."""
-    updated = monitor.update_site_simulation(site_id, req.state)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Site not found")
-    return {"status": "success", "site": updated}
-
-@app.post("/api/sites/{site_id}/check")
-async def check_single_site(site_id: str):
-    """Triggers an instant OpenVINO audit for a specific site."""
-    site = monitor.get_site(site_id)
+@app.get("/api/sites/{domain_id}/dns")
+async def get_site_dns(domain_id: str):
+    """Queries and returns real live DNS records for domain."""
+    site = db.get_domain(domain_id)
     if not site:
-        raise HTTPException(status_code=404, detail="Site not found")
-    checked = monitor.check_site_health(site)
-    return {"status": "success", "site": checked}
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    dns_res = DNSService.resolve_all_records(site["domain"])
+    db.save_dns_records(domain_id, dns_res["all_records"])
+    return {"status": "success", "domain": site["domain"], "dns": dns_res}
+
+@app.get("/api/sites/{domain_id}/ssl")
+async def get_site_ssl(domain_id: str):
+    """Performs a real TLS socket handshake and returns certificate telemetry."""
+    site = db.get_domain(domain_id)
+    if not site:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    ssl_res = SSLService.inspect_ssl(site["domain"])
+    db.save_ssl_cert(domain_id, ssl_res)
+    return {"status": "success", "domain": site["domain"], "ssl": ssl_res}
+
+@app.post("/api/sites/{domain_id}/check")
+async def check_site_endpoint(domain_id: str):
+    """Triggers an instant real Playwright crawl + OpenVINO neural audit for a specific site."""
+    try:
+        updated_site = await monitor.audit_single_domain(domain_id)
+        return {"status": "success", "site": updated_site}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/sites/refresh-all")
-async def refresh_all_sites():
-    """Triggers a full cluster health audit across all domains."""
-    updated = monitor.refresh_all()
-    return {"status": "success", "total_sites": len(updated), "sites": updated}
+async def refresh_all_sites(background_tasks: BackgroundTasks):
+    """Triggers real audit across all domains in background."""
+    async def run_refresh():
+        await monitor.audit_all_domains()
+
+    background_tasks.add_task(run_refresh)
+    return {"status": "success", "message": "Cluster audit dispatched across all domains"}
 
 @app.post("/api/domain/analyze")
-async def analyze_domain_endpoint(req: DomainAnalyzeRequest):
+async def analyze_domain(req: DomainRiskRequest):
     """Runs OpenVINO NLP brand armor and typosquatting scanner on any domain."""
     if not req.domain:
         raise HTTPException(status_code=400, detail="Domain is required")
-    result = engine.analyze_domain_risk(req.domain)
-    return {"status": "success", "analysis": result}
+    analysis = engine.analyze_domain_risk(req.domain)
+    return {"status": "success", "analysis": analysis}
 
 @app.get("/api/benchmark")
-async def run_benchmark(iterations: int = 50):
-    """Runs a live Intel OpenVINO inference hardware stress test and benchmark."""
+async def run_hardware_benchmark(iterations: int = 50):
+    """Runs live Intel OpenVINO hardware inference throughput & latency benchmark."""
     iters = min(200, max(10, iterations))
-    benchmark_data = engine.run_hardware_benchmark(iterations=iters)
-    return {"status": "success", "benchmark": benchmark_data}
+    benchmark = engine.run_hardware_benchmark(iterations=iters)
+    return {"status": "success", "benchmark": benchmark}
 
 if __name__ == "__main__":
     import uvicorn
-    print("[Server] Starting WebSentinel AI on http://localhost:8000")
+    print("[Server] Launching WebSentinel AI Production Platform on http://0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

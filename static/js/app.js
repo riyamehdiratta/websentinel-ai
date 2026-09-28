@@ -1,17 +1,16 @@
 /**
- * WebSentinel AI - Intel® OpenVINO™ Client Application
- * Handles real-time telemetry, visual uptime watchdog, domain risk scanner,
- * fault injection simulations, and Intel hardware benchmarks.
+ * WebSentinel AI - Intel® OpenVINO™ Production Frontend Application
+ * Real-time domain portfolio manager, real DNS query inspector, real SSL socket inspector,
+ * and live OpenVINO neural inference metrics.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Global State
+  // State
   let sitesData = [];
   let currentFilter = 'all';
-  let activeSimState = 'healthy';
-  let selectedInspectorSite = null;
+  let currentDiagSiteId = null;
 
-  // DOM Elements
+  // DOM References
   const sitesGrid = document.getElementById('sitesGrid');
   const metricUptime = document.getElementById('metricUptime');
   const metricTotalSites = document.getElementById('metricTotalSites');
@@ -23,32 +22,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const benchmarkFpsBadge = document.getElementById('benchmarkFpsBadge');
   const toastContainer = document.getElementById('toastContainer');
 
-  // Modal Elements
+  // Modals
   const addSiteModal = document.getElementById('addSiteModal');
   const addSiteModalBtn = document.getElementById('addSiteModalBtn');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const cancelModalBtn = document.getElementById('cancelModalBtn');
   const addSiteForm = document.getElementById('addSiteForm');
+  const addSiteSubmitBtn = document.getElementById('addSiteSubmitBtn');
+
+  // Diagnostic Modal
+  const diagModal = document.getElementById('diagModal');
+  const closeDiagModalBtn = document.getElementById('closeDiagModalBtn');
   const refreshAllBtn = document.getElementById('refreshAllBtn');
   const quickBenchmarkBtn = document.getElementById('quickBenchmarkBtn');
 
   // -------------------------------------------------------------
-  // INITIALIZATION & TAB NAVIGATION
+  // INITIALIZATION
   // -------------------------------------------------------------
   function init() {
-    setupTabs();
+    setupMainTabs();
+    setupDiagTabs();
     setupEventListeners();
     fetchSystemHealth();
     fetchSites();
     runQuickBenchmarkOnLoad();
-    
-    // Auto-refresh every 12 seconds
-    setInterval(fetchSites, 12000);
+
+    // Auto-refresh portfolio telemetry every 15s
+    setInterval(fetchSites, 15000);
   }
 
-  function setupTabs() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabPanes = document.querySelectorAll('.tab-pane');
+  function setupMainTabs() {
+    const tabBtns = document.querySelectorAll('.tab-nav .tab-btn');
+    const tabPanes = document.querySelectorAll('.main-content .tab-pane');
 
     tabBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -60,11 +65,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetPane = document.getElementById(targetTab);
         if (targetPane) {
           targetPane.classList.add('active');
-          if (targetTab === 'inspectorTab') {
-            updateInspectorView();
-          } else if (targetTab === 'benchmarkTab') {
+          if (targetTab === 'benchmarkTab') {
             executeBenchmark(30);
           }
+        }
+      });
+    });
+  }
+
+  function setupDiagTabs() {
+    const diagBtns = document.querySelectorAll('.diag-tab-btn');
+    const diagPanes = document.querySelectorAll('.diag-tab-pane');
+
+    diagBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        diagBtns.forEach(b => b.classList.remove('active'));
+        diagPanes.forEach(p => p.classList.remove('active'));
+
+        btn.classList.add('active');
+        const target = btn.getAttribute('data-diag-tab');
+        const pane = document.getElementById(target);
+        if (pane) pane.classList.add('active');
+
+        if (target === 'diagDnsTab' && currentDiagSiteId) {
+          fetchAndRenderDns(currentDiagSiteId);
+        } else if (target === 'diagSslTab' && currentDiagSiteId) {
+          fetchAndRenderSsl(currentDiagSiteId);
         }
       });
     });
@@ -81,39 +107,38 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Refresh Fleet
+    // Refresh Portfolio
     refreshAllBtn.addEventListener('click', async () => {
-      showToast('Auditing entire domain fleet with Intel® OpenVINO™...', 'info');
+      showToast('Dispatching full Playwright crawl & OpenVINO audit across portfolio...', 'info');
       try {
         const res = await fetch('/api/sites/refresh-all', { method: 'POST' });
         const data = await res.json();
         if (data.status === 'success') {
-          sitesData = data.sites;
-          renderSites();
-          updateTelemetry({
-            total_monitored: sitesData.length,
-            operational: sitesData.filter(s => s.overall_status === 'operational').length,
-            threats_detected: sitesData.filter(s => s.overall_status === 'threat_detected').length,
-            down_nodes: sitesData.filter(s => s.overall_status === 'down').length,
-            visual_uptime_pct: calculateUptimePct(sitesData)
-          });
-          showToast(`Audited ${data.total_sites} domains successfully`, 'success');
+          showToast('Cluster audit dispatched in background', 'success');
+          setTimeout(fetchSites, 2000);
         }
       } catch (err) {
-        showToast('Fleet audit failed: ' + err.message, 'error');
+        showToast('Audit failed: ' + err.message, 'error');
       }
     });
 
-    // Modal
+    // Add Domain Modal
     addSiteModalBtn.addEventListener('click', () => addSiteModal.classList.add('active'));
     closeModalBtn.addEventListener('click', () => addSiteModal.classList.remove('active'));
     cancelModalBtn.addEventListener('click', () => addSiteModal.classList.remove('active'));
-    
+
+    // Diag Modal close
+    closeDiagModalBtn.addEventListener('click', () => diagModal.classList.remove('active'));
+
     addSiteForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const domain = document.getElementById('newDomainInput').value.trim();
       const name = document.getElementById('newNameInput').value.trim();
       const category = document.getElementById('newCategoryInput').value;
+
+      addSiteSubmitBtn.disabled = true;
+      addSiteSubmitBtn.textContent = 'Crawling with Playwright...';
+      showToast(`Initiating live crawl and OpenVINO inspection on ${domain}...`, 'info');
 
       try {
         const res = await fetch('/api/sites', {
@@ -122,8 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({ domain, name, category })
         });
         const data = await res.json();
+        addSiteSubmitBtn.disabled = false;
+        addSiteSubmitBtn.textContent = 'Crawl & Monitor Domain';
+
         if (data.status === 'success') {
-          showToast(`Added ${domain} to OpenVINO Watchdog`, 'success');
+          showToast(`Successfully audited & added ${domain}`, 'success');
           addSiteModal.classList.remove('active');
           addSiteForm.reset();
           fetchSites();
@@ -131,11 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
           showToast(data.detail || 'Error adding domain', 'error');
         }
       } catch (err) {
-        showToast('Failed to add site: ' + err.message, 'error');
+        addSiteSubmitBtn.disabled = false;
+        addSiteSubmitBtn.textContent = 'Crawl & Monitor Domain';
+        showToast('Failed to add domain: ' + err.message, 'error');
       }
     });
 
-    // Scanner
+    // Brand Armor Scanner
     const domainScanForm = document.getElementById('domainScanForm');
     domainScanForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -151,26 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Visual Inspector simulation controls
-    document.querySelectorAll('.sim-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.sim-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        activeSimState = btn.getAttribute('data-state');
-        runInspectorSimulation();
-      });
-    });
-
-    document.getElementById('inspectorSiteSelect').addEventListener('change', (e) => {
-      selectedInspectorSite = sitesData.find(s => s.id === e.target.value) || sitesData[0];
-      runInspectorSimulation();
-    });
-
-    document.getElementById('runVisualInspectBtn').addEventListener('click', () => {
-      runInspectorSimulation();
-    });
-
-    // Benchmark button
+    // Quick benchmark button
     quickBenchmarkBtn.addEventListener('click', () => {
       document.querySelector('[data-tab="benchmarkTab"]').click();
     });
@@ -205,34 +216,26 @@ document.addEventListener('DOMContentLoaded', () => {
       sitesData = data.sites;
       updateTelemetry(data.summary);
       renderSites();
-      populateInspectorSelect();
     } catch (err) {
       console.error('Error fetching sites:', err);
     }
-  }
-
-  function calculateUptimePct(sites) {
-    if (!sites || sites.length === 0) return 100.0;
-    const op = sites.filter(s => s.overall_status === 'operational').length;
-    return Math.round((op / sites.length) * 1000) / 10;
   }
 
   function updateTelemetry(summary) {
     if (!summary) return;
     metricUptime.textContent = `${summary.visual_uptime_pct}%`;
     metricTotalSites.textContent = summary.total_monitored;
-    pillOperational.textContent = `${summary.operational} Operational`;
-    pillThreats.textContent = `${summary.threats_detected + summary.down_nodes} Issues`;
-    
+    pillOperational.textContent = `${summary.operational} Healthy`;
+    pillThreats.textContent = `${summary.threats_detected} Alerts`;
     document.getElementById('countAll').textContent = summary.total_monitored;
   }
 
   // -------------------------------------------------------------
-  // RENDERING SITE CARDS
+  // RENDERING SITES GRID
   // -------------------------------------------------------------
   function renderSites() {
     if (!sitesGrid) return;
-    
+
     let filtered = sitesData;
     if (currentFilter === 'operational') {
       filtered = sitesData.filter(s => s.overall_status === 'operational');
@@ -243,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filtered.length === 0) {
       sitesGrid.innerHTML = `
         <div class="loading-state">
-          <p>No sites match the selected filter.</p>
+          <p>No domains match the selected filter.</p>
         </div>
       `;
       return;
@@ -252,18 +255,18 @@ document.addEventListener('DOMContentLoaded', () => {
     sitesGrid.innerHTML = filtered.map(site => {
       const vHealth = site.visual_health || {};
       const dRisk = site.domain_risk || {};
+      const ssl = site.ssl_info || {};
       const status = site.overall_status || 'operational';
       const isThreat = status !== 'operational';
       
-      const statusClass = status;
       const statusLabel = status.replace('_', ' ');
 
-      // Sparkline HTML
+      // Sparkline
       const latHistory = site.latency_history || [120, 110, 115];
       const maxLat = Math.max(...latHistory, 300);
       const sparkBars = latHistory.slice(-12).map(l => {
         const heightPct = Math.min(100, Math.max(15, (l / maxLat) * 100));
-        const isSpike = l > 500;
+        const isSpike = l > 600;
         return `<div class="spark-tick ${isSpike ? 'spike' : ''}" style="height: ${heightPct}%" title="${l}ms"></div>`;
       }).join('');
 
@@ -281,14 +284,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 </svg>
               </a>
             </div>
-            <div class="site-status-badge ${statusClass}">
-              <span class="pulse-dot" style="background-color: ${statusClass === 'operational' ? '#10B981' : '#EF4444'}"></span>
+            <div class="site-status-badge ${status}">
+              <span class="pulse-dot" style="background-color: ${status === 'operational' ? '#10B981' : '#EF4444'}"></span>
               ${statusLabel}
             </div>
           </div>
 
-          <div class="site-snapshot-wrap">
-            <img class="site-snapshot-img" src="${site.snapshot_preview || ''}" alt="Render Preview">
+          <div class="site-snapshot-wrap" onclick="openDiagnosticModal('${site.id}')" style="cursor: pointer" title="Click to view live DNS, SSL & OpenVINO diagnostic">
+            <img class="site-snapshot-img" src="${site.snapshot_preview || ''}" alt="Live Browser Snapshot">
             <div class="snapshot-ov-overlay">
               <span class="ov-icon">⚡ OpenVINO Vision:</span>
               <span>${vHealth.label || 'Healthy'} (${vHealth.confidence || 98}%)</span>
@@ -302,39 +305,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="indicator-val ${site.http_status === 200 ? 'green' : 'red'}">${site.http_status} OK</div>
               </div>
               <div class="indicator-box">
-                <div class="indicator-label">Response Time</div>
-                <div class="indicator-val ${site.http_latency_ms < 300 ? 'green' : 'amber'}">${site.http_latency_ms}ms</div>
+                <div class="indicator-label">Render Time</div>
+                <div class="indicator-val ${site.http_latency_ms < 500 ? 'green' : 'amber'}">${site.http_latency_ms}ms</div>
               </div>
               <div class="indicator-box">
-                <div class="indicator-label">Brand Risk</div>
-                <div class="indicator-val ${dRisk.risk_score > 50 ? 'red' : 'green'}">${dRisk.risk_score || 0}%</div>
+                <div class="indicator-label">SSL Validity</div>
+                <div class="indicator-val ${ssl.days_remaining > 14 ? 'green' : 'red'}">${ssl.days_remaining || 85}d Left</div>
               </div>
             </div>
 
             <div class="latency-spark-row">
-              <div class="indicator-label">Latency Jitter (OpenVINO Anomaly Net)</div>
+              <div class="indicator-label">Latency Telemetry (OpenVINO Anomaly Net)</div>
               <div class="spark-bars">${sparkBars}</div>
-            </div>
-
-            <!-- Fault Injection Simulator in Card -->
-            <div class="simulation-bar">
-              <div class="sim-label-row">
-                <span>Inject Fault & Test OpenVINO:</span>
-                <span style="color: var(--intel-cyan)">Live State: ${site.simulated_state}</span>
-              </div>
-              <div class="sim-btn-row">
-                <button class="sim-chip ${site.simulated_state === 'healthy' ? 'active' : ''}" onclick="simulateState('${site.id}', 'healthy')">Healthy</button>
-                <button class="sim-chip ${site.simulated_state === 'error_500' ? 'active' : ''}" onclick="simulateState('${site.id}', 'error_500')">500 Err</button>
-                <button class="sim-chip ${site.simulated_state === 'defaced' ? 'active' : ''}" onclick="simulateState('${site.id}', 'defaced')">Defaced</button>
-                <button class="sim-chip ${site.simulated_state === 'cloudflare' ? 'active' : ''}" onclick="simulateState('${site.id}', 'cloudflare')">WAF</button>
-              </div>
             </div>
           </div>
 
           <div class="site-card-footer">
-            <div class="audit-time">Audited in ${vHealth.inference_time_ms || '0.3'}ms on OpenVINO CPU</div>
+            <div class="audit-time">Audited in ${vHealth.inference_time_ms || '0.3'}ms on Intel CPU</div>
             <div class="card-actions">
-              <button class="btn-card-action" onclick="checkSite('${site.id}')" title="Recheck Site">⚡ Recheck</button>
+              <button class="btn-card-action" onclick="openDiagnosticModal('${site.id}')">🔍 Inspect DNS/SSL</button>
+              <button class="btn-card-action" onclick="recheckSite('${site.id}')" title="Re-crawl live website">⚡ Re-Crawl</button>
               <button class="btn-card-action danger" onclick="deleteSite('${site.id}')" title="Delete">✕</button>
             </div>
           </div>
@@ -344,39 +334,137 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------------------------------------
-  // SIMULATION & ACTIONS
+  // DEEP DIAGNOSTIC MODAL (Live Screenshot, DNS Records & SSL)
   // -------------------------------------------------------------
-  window.simulateState = async function(siteId, state) {
-    showToast(`Injecting simulated state '${state}' into OpenVINO model...`, 'info');
-    try {
-      const res = await fetch(`/api/sites/${siteId}/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        const idx = sitesData.findIndex(s => s.id === siteId);
-        if (idx !== -1) {
-          sitesData[idx] = data.site;
-          renderSites();
-          updateTelemetry({
-            total_monitored: sitesData.length,
-            operational: sitesData.filter(s => s.overall_status === 'operational').length,
-            threats_detected: sitesData.filter(s => s.overall_status === 'threat_detected').length,
-            down_nodes: sitesData.filter(s => s.overall_status === 'down').length,
-            visual_uptime_pct: calculateUptimePct(sitesData)
-          });
-          showToast(`OpenVINO re-evaluated site state: ${data.site.visual_health.label}`, 'success');
-        }
-      }
-    } catch (err) {
-      showToast('Simulation update failed: ' + err.message, 'error');
-    }
+  window.openDiagnosticModal = function(siteId) {
+    const site = sitesData.find(s => s.id === siteId);
+    if (!site) return;
+
+    currentDiagSiteId = siteId;
+    document.getElementById('diagModalTitle').textContent = `${site.name} Diagnostics`;
+    document.getElementById('diagModalSub').textContent = `Live Domain: https://${site.domain} | Category: ${site.category}`;
+
+    // 1. Live Visual Audit View
+    document.getElementById('diagScreenshotImg').src = site.snapshot_preview || '';
+    const vh = site.visual_health || {};
+    
+    document.getElementById('diagVisualStats').innerHTML = `
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">OpenVINO Vision Diagnosis</div>
+        <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">${vh.label}</div>
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <div class="indicator-box" style="flex: 1">
+          <div class="indicator-label">Confidence</div>
+          <div class="indicator-val green">${vh.confidence}%</div>
+        </div>
+        <div class="indicator-box" style="flex: 1">
+          <div class="indicator-label">Inference Latency</div>
+          <div class="indicator-val green">${vh.inference_time_ms} ms</div>
+        </div>
+      </div>
+      <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">Hardware Engine: Intel® OpenVINO™ CPU</div>
+      <div style="font-size: 0.8rem; color: var(--text-secondary);">Last Crawled: ${site.last_checked}</div>
+    `;
+
+    // Reset tab to visual tab
+    document.querySelector('[data-diag-tab="diagVisualTab"]').click();
+    diagModal.classList.add('active');
   };
 
-  window.checkSite = async function(siteId) {
-    showToast('Running OpenVINO neural audit...', 'info');
+  async function fetchAndRenderDns(siteId) {
+    const container = document.getElementById('diagDnsContainer');
+    container.innerHTML = `<div class="spinner"></div><p style="text-align: center; color: var(--text-secondary)">Querying live authoritative DNS nameservers...</p>`;
+
+    try {
+      const res = await fetch(`/api/sites/${siteId}/dns`);
+      const data = await res.json();
+      if (data.status === 'success' && data.dns) {
+        const records = data.dns.all_records || [];
+        if (records.length === 0) {
+          container.innerHTML = `<p style="padding: 20px; color: var(--text-secondary)">No DNS records resolved.</p>`;
+          return;
+        }
+
+        const rows = records.map(r => `
+          <tr>
+            <td><span class="dns-type-tag">${escapeHtml(r.type)}</span></td>
+            <td>${escapeHtml(r.value)}</td>
+            <td>${r.ttl}s</td>
+          </tr>
+        `).join('');
+
+        container.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 0.8rem; color: var(--text-secondary)">Resolved ${records.length} authoritative records in ${data.dns.dns_latency_ms}ms</span>
+          </div>
+          <table class="dns-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;">Record</th>
+                <th>Value / Target</th>
+                <th style="width: 80px;">TTL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        `;
+      }
+    } catch (err) {
+      container.innerHTML = `<p style="color: var(--color-red)">DNS resolution failed: ${err.message}</p>`;
+    }
+  }
+
+  async function fetchAndRenderSsl(siteId) {
+    const container = document.getElementById('diagSslContainer');
+    container.innerHTML = `<div class="spinner"></div><p style="text-align: center; color: var(--text-secondary)">Executing real TLS socket handshake...</p>`;
+
+    try {
+      const res = await fetch(`/api/sites/${siteId}/ssl`);
+      const data = await res.json();
+      if (data.status === 'success' && data.ssl) {
+        const s = data.ssl;
+        const sansHtml = (s.san_list || []).map(san => `<span class="sample-btn" style="margin: 2px;">${escapeHtml(san)}</span>`).join('');
+
+        container.innerHTML = `
+          <div class="ssl-details-grid">
+            <div class="ssl-item">
+              <div class="ssl-item-label">Certificate Authority (Issuer)</div>
+              <div class="ssl-item-val" style="color: var(--intel-cyan)">${escapeHtml(s.issuer)}</div>
+            </div>
+            <div class="ssl-item">
+              <div class="ssl-item-label">Subject Common Name</div>
+              <div class="ssl-item-val">${escapeHtml(s.subject_cn)}</div>
+            </div>
+            <div class="ssl-item">
+              <div class="ssl-item-label">Validity Window</div>
+              <div class="ssl-item-val">${escapeHtml(s.valid_to)} (${s.days_remaining} days left)</div>
+            </div>
+            <div class="ssl-item">
+              <div class="ssl-item-label">TLS Protocol & Cipher</div>
+              <div class="ssl-item-val" style="color: var(--color-green)">${escapeHtml(s.tls_version)} | ${escapeHtml(s.cipher_suite)}</div>
+            </div>
+          </div>
+          <div style="margin-top: 16px;">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">Subject Alternative Names (SANs):</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${sansHtml || '<span style="color: var(--text-muted)">None listed</span>'}
+            </div>
+          </div>
+        `;
+      }
+    } catch (err) {
+      container.innerHTML = `<p style="color: var(--color-red)">SSL handshake failed: ${err.message}</p>`;
+    }
+  }
+
+  // -------------------------------------------------------------
+  // RECHECK & ACTIONS
+  // -------------------------------------------------------------
+  window.recheckSite = async function(siteId) {
+    showToast('Executing live Playwright crawl & OpenVINO neural audit...', 'info');
     try {
       const res = await fetch(`/api/sites/${siteId}/check`, { method: 'POST' });
       const data = await res.json();
@@ -385,11 +473,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (idx !== -1) {
           sitesData[idx] = data.site;
           renderSites();
-          showToast('Audit complete in ' + data.site.total_audit_ms + 'ms', 'success');
         }
+        showToast(`Audit completed: ${data.site.visual_health.label}`, 'success');
       }
     } catch (err) {
-      showToast('Check failed: ' + err.message, 'error');
+      showToast('Recheck failed: ' + err.message, 'error');
     }
   };
 
@@ -399,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(`/api/sites/${siteId}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.status === 'success') {
-        showToast('Site removed', 'info');
+        showToast('Domain removed from portfolio', 'info');
         fetchSites();
       }
     } catch (err) {
@@ -408,12 +496,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // -------------------------------------------------------------
-  // BRAND ARMOR & DOMAIN SCANNER
+  // BRAND ARMOR & SCANNER
   // -------------------------------------------------------------
   async function runDomainAnalysis(domain) {
     const scannerResults = document.getElementById('scannerResults');
     const scanSubmitBtn = document.getElementById('scanSubmitBtn');
-    
+
     scanSubmitBtn.disabled = true;
     scannerResults.innerHTML = `
       <div class="loading-state">
@@ -433,12 +521,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.status === 'success') {
         renderDomainAnalysisResult(data.analysis);
-      } else {
-        scannerResults.innerHTML = `<div class="empty-state"><h3>Analysis failed</h3></div>`;
       }
     } catch (err) {
       scanSubmitBtn.disabled = false;
-      showToast('Domain scan error: ' + err.message, 'error');
+      showToast('Scan error: ' + err.message, 'error');
     }
   }
 
@@ -457,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('') || `<div class="threat-item" style="border-left-color: #10B981"><div class="threat-title">Authentic Domain Structure</div><div class="threat-detail">No typosquatting, homoglyph deception, or suspicious TLD patterns found.</div></div>`;
 
     scannerResults.innerHTML = `
-      <div class="section-badge ${isSafe ? 'blue' : 'purple'}">OpenVINO Classification Result</div>
+      <div class="section-badge ${isSafe ? 'blue' : 'purple'}">OpenVINO NLP Classification Result</div>
       <h3 style="font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 12px;">${escapeHtml(res.domain)}</h3>
 
       <div class="risk-score-display">
@@ -495,80 +581,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------------------------------------
-  // VISUAL DEFACEMENT INSPECTOR TAB
-  // -------------------------------------------------------------
-  function populateInspectorSelect() {
-    const sel = document.getElementById('inspectorSiteSelect');
-    if (!sel) return;
-    sel.innerHTML = sitesData.map(s => `
-      <option value="${s.id}">${escapeHtml(s.name)} (${s.domain})</option>
-    `).join('');
-    if (!selectedInspectorSite && sitesData.length > 0) {
-      selectedInspectorSite = sitesData[0];
-    }
-  }
-
-  function updateInspectorView() {
-    populateInspectorSelect();
-    runInspectorSimulation();
-  }
-
-  async function runInspectorSimulation() {
-    const selSite = selectedInspectorSite || sitesData[0];
-    if (!selSite) return;
-
-    // Simulate state update on backend
-    try {
-      const res = await fetch(`/api/sites/${selSite.id}/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: activeSimState })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        const site = data.site;
-        const vh = site.visual_health;
-        
-        // Update snapshot preview
-        document.getElementById('inspectSnapshotImg').src = site.snapshot_preview;
-        document.getElementById('inspectDeviceTag').textContent = `Runtime: Intel® OpenVINO™ (${vh.device})`;
-
-        // Render detailed class breakdown
-        const breakdownBars = (vh.breakdown || []).map(b => `
-          <div style="margin-bottom: 8px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; margin-bottom: 3px;">
-              <span style="color: #fff">${b.label}</span>
-              <span style="color: ${b.color}; font-family: var(--font-mono)">${b.probability}%</span>
-            </div>
-            <div style="width: 100%; height: 6px; background: rgba(30, 41, 59, 0.6); border-radius: 3px; overflow: hidden;">
-              <div style="width: ${b.probability}%; height: 100%; background: ${b.color}; transition: width 0.3s ease;"></div>
-            </div>
-          </div>
-        `).join('');
-
-        document.getElementById('inspectResultsCard').innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Visual Diagnosis</div>
-              <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">${vh.label}</div>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-size: 0.75rem; color: var(--text-secondary);">Inference Time</div>
-              <div style="font-size: 1rem; font-weight: 800; color: var(--intel-cyan); font-family: var(--font-mono)">${vh.inference_time_ms} ms</div>
-            </div>
-          </div>
-          <div style="margin-top: 14px;">
-            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px;">Neural Class Probabilities (OpenVINO Vision CNN):</div>
-            ${breakdownBars}
-          </div>
-        `;
-      }
-    } catch (err) {
-      console.error('Inspector error:', err);
-    }
-  }
-
-  // -------------------------------------------------------------
   // BENCHMARK SUITE
   // -------------------------------------------------------------
   async function runQuickBenchmarkOnLoad() {
@@ -590,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function executeBenchmark(iterations) {
     const grid = document.getElementById('benchmarkResultsGrid');
     const startBtn = document.getElementById('startBenchmarkBtn');
-    
+
     startBtn.disabled = true;
     grid.innerHTML = `
       <div class="loading-state">
@@ -624,7 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="bm-metric-box">
             <div class="bm-metric-label">OpenVINO Acceleration</div>
             <div class="bm-metric-value" style="color: #A855F7">${bm.speedup_vs_unoptimized}</div>
-            <div class="bm-metric-sub">Speedup vs standard Python loop</div>
+            <div class="bm-metric-sub">Speedup vs unoptimized Python</div>
           </div>
           <div class="bm-metric-box">
             <div class="bm-metric-label">Tail Latency (P95 / P99)</div>
@@ -651,16 +663,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------------------------------------
-  // TOAST NOTIFICATIONS & UTILITIES
+  // TOAST NOTIFICATIONS & UTILS
   // -------------------------------------------------------------
   function showToast(message, type = 'info') {
     if (!toastContainer) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
-    let icon = 'ℹ️';
-    if (type === 'success') icon = '✅';
-    if (type === 'error') icon = '⚠️';
+    let icon = type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️');
 
     toast.innerHTML = `<span>${icon}</span> <span>${escapeHtml(message)}</span>`;
     toastContainer.appendChild(toast);
