@@ -19,8 +19,9 @@ class DNSService:
         clean_domain = domain.lower().strip().replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
         
         resolver = dns.resolver.Resolver()
-        resolver.timeout = 3.0
-        resolver.lifetime = 3.0
+        resolver.nameservers = ['8.8.8.8', '1.1.1.1', '8.8.4.4']
+        resolver.timeout = 2.0
+        resolver.lifetime = 4.0
 
         records_by_type = {}
         all_records_list = []

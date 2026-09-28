@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Refresh Portfolio
     refreshAllBtn.addEventListener('click', async () => {
-      showToast('Dispatching full Playwright crawl & OpenVINO audit across portfolio...', 'info');
+      showToast('Dispatching site crawls and visual audits across portfolio...', 'info');
       try {
         const res = await fetch('/api/sites/refresh-all', { method: 'POST' });
         const data = await res.json();
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       addSiteSubmitBtn.disabled = true;
       addSiteSubmitBtn.textContent = 'Crawling with Playwright...';
-      showToast(`Initiating live crawl and OpenVINO inspection on ${domain}...`, 'info');
+      showToast(`Initiating live crawl and audit on ${domain}...`, 'info');
 
       try {
         const res = await fetch('/api/sites', {
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // RECHECK & ACTIONS
   // -------------------------------------------------------------
   window.recheckSite = async function(siteId) {
-    showToast('Executing live Playwright crawl & OpenVINO neural audit...', 'info');
+    showToast('Executing live Playwright crawl & visual health audit...', 'info');
     try {
       const res = await fetch(`/api/sites/${siteId}/check`, { method: 'POST' });
       const data = await res.json();
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scannerResults.innerHTML = `
       <div class="loading-state">
         <div class="spinner"></div>
-        <p>Analyzing character embeddings with OpenVINO DomainRiskNet...</p>
+        <p>Analyzing character embeddings with neural classifier...</p>
       </div>
     `;
 
@@ -543,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('') || `<div class="threat-item" style="border-left-color: #10B981"><div class="threat-title">Authentic Domain Structure</div><div class="threat-detail">No typosquatting, homoglyph deception, or suspicious TLD patterns found.</div></div>`;
 
     scannerResults.innerHTML = `
-      <div class="section-badge ${isSafe ? 'blue' : 'purple'}">OpenVINO NLP Classification Result</div>
+      <div class="section-badge ${isSafe ? 'blue' : 'purple'}">Neural Risk Classification</div>
       <h3 style="font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 12px;">${escapeHtml(res.domain)}</h3>
 
       <div class="risk-score-display">
@@ -607,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
     grid.innerHTML = `
       <div class="loading-state">
         <div class="spinner"></div>
-        <p>Executing ${iterations} OpenVINO inference loops on ${intelDeviceLabel.textContent}...</p>
+        <p>Executing ${iterations} inference loops on ${intelDeviceLabel.textContent}...</p>
       </div>
     `;
 
@@ -654,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="bm-metric-sub">Average: ${bm.latency_avg_ms}ms | Min: ${bm.latency_min_ms}ms</div>
           </div>
         `;
-        showToast('Intel® OpenVINO™ Benchmark Complete', 'success');
+        showToast('Engine Performance Benchmark Complete', 'success');
       }
     } catch (err) {
       startBtn.disabled = false;

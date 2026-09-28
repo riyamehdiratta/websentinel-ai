@@ -23,7 +23,19 @@ class SSLService:
         context = ssl.create_default_context()
         
         try:
-            with socket.create_connection((clean_domain, port), timeout=4.0) as sock:
+            try:
+                raw_sock = socket.create_connection((clean_domain, port), timeout=4.0)
+            except (socket.gaierror, socket.timeout):
+                # Fallback: resolve IP directly via DNSService
+                from dns_service import DNSService
+                dns_res = DNSService.resolve_all_records(clean_domain)
+                a_records = dns_res.get("records_by_type", {}).get("A", [])
+                if a_records:
+                    raw_sock = socket.create_connection((a_records[0]["value"], port), timeout=4.0)
+                else:
+                    raise
+
+            with raw_sock as sock:
                 with context.wrap_socket(sock, server_hostname=clean_domain) as ssock:
                     cert = ssock.getpeercert()
                     cipher_info = ssock.cipher() # (cipher_name, proto_version, secret_bits)
