@@ -28,33 +28,33 @@ Traditional uptime monitoring tools (basic HTTP pingers) only test whether a web
 
 ```mermaid
 flowchart TD
-    User([DevOps / Security Admin]) -->|Add Domain or URL| API[FastAPI Server :8000]
+    User(["DevOps / Security Admin"]) -->|"Add Domain or URL"| API["FastAPI Server :8000"]
 
     subgraph Probes ["Live Telemetry & Capture Engine"]
-        API -->|Async Navigation| PW[Headless Chromium\nPlaywright Engine]
-        PW -->|1280x800 Screenshot Buffer| Pixels[Raw Screenshot Buffer]
+        API -->|"Async Navigation"| PW["Headless Chromium Playwright Engine"]
+        PW -->|"1280x800 Screenshot Buffer"| Pixels["Raw Screenshot Buffer"]
         
-        API -->|Port 443 Socket| SSL_Probe[TLS Handshake Engine\nOpenSSL / SSLContext]
-        SSL_Probe -->|x509 Certificate| SSL_Meta[Issuer, Cipher, TLSv1.3, Expiry]
+        API -->|"Port 443 Socket"| SSL_Probe["TLS Handshake Engine (OpenSSL)"]
+        SSL_Probe -->|"x509 Certificate"| SSL_Meta["Issuer, Cipher, TLSv1.3, Expiry"]
 
-        API -->|UDP/TCP Query| DNS_Probe[dnspython Resolver]
-        DNS_Probe -->|Authoritative Records| DNS_Meta[A, AAAA, MX, NS, TXT, CNAME, SOA]
+        API -->|"UDP / TCP Query"| DNS_Probe["dnspython Resolver"]
+        DNS_Probe -->|"Authoritative Records"| DNS_Meta["A, AAAA, MX, NS, TXT, CNAME, SOA"]
     end
 
     subgraph AI_Inference ["Accelerated AI Inference Engine"]
-        Pixels -->|RGB Normalized Tensor| MB[visual_feature_net\nPyTorch MobileNetV2]
-        Pixels -->|RGB Tensor [1, 3, 224, 224]| VH[visual_health_net\nVision Health Classifier]
-        API -->|Domain Feature Vector [1, 32]| DR[domain_risk_net\nBrand Armor NLP Net]
-        API -->|Rolling 20-Point Latency [1, 20]| LA[latency_anomaly_net\nPredictive Jitter Net]
+        Pixels -->|"RGB Normalized Tensor"| MB["visual_feature_net (MobileNetV2)"]
+        Pixels -->|"RGB Tensor (1, 3, 224, 224)"| VH["visual_health_net (Vision Health Classifier)"]
+        API -->|"Domain Feature Vector (1, 32)"| DR["domain_risk_net (Brand Armor NLP Net)"]
+        API -->|"Rolling 20-Point Latency"| LA["latency_anomaly_net (Predictive Jitter Net)"]
     end
 
-    VH -->|Visual Health Scores| Storage[(SQLite Database\nsentinel.db)]
-    DR -->|Phishing & Typosquat Alerts| Storage
-    LA -->|Latency Anomaly Alerts| Storage
+    VH -->|"Visual Health Scores"| Storage[("SQLite Database sentinel.db")]
+    DR -->|"Phishing & Typosquat Alerts"| Storage
+    LA -->|"Latency Anomaly Alerts"| Storage
     SSL_Meta --> Storage
     DNS_Meta --> Storage
 
-    Storage --> Dashboard[WebSentinel Cyber Operations Dashboard]
+    Storage --> Dashboard["WebSentinel Cyber Operations Dashboard"]
 ```
 
 ---
