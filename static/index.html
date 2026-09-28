@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSentinel AI - Intel® OpenVINO™ Website & Domain Health Guardian</title>
+  <meta name="description" content="AI-Powered Website Uptime & Visual Health Guardian accelerated by Intel® OpenVINO™ for real-time defacement, outage, and typosquatting detection.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    <!-- TOP NAVIGATION & INTEL TELEMETRY BAR -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <div class="brand-logo">
+          <div class="intel-spark">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <div class="brand-title">WebSentinel <span class="accent-text">AI</span></div>
+            <div class="brand-subtitle">Powered by Intel® OpenVINO™</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="intel-chip-status">
+        <div class="chip-badge">
+          <span class="pulse-dot"></span>
+          <span class="chip-label">Intel® OpenVINO™ Engine:</span>
+          <span class="chip-val" id="intelDeviceLabel">CPU (Optimized)</span>
+        </div>
+        <div class="chip-badge latency-badge">
+          <span class="chip-label">Inference:</span>
+          <span class="chip-val highlight" id="avgInferenceLabel">< 1.0 ms</span>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button id="refreshAllBtn" class="btn btn-secondary btn-icon" title="Refresh all websites">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>Audit Fleet</span>
+        </button>
+        <button id="addSiteModalBtn" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Monitor Domain</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- METRICS & TELEMETRY STRIP -->
+    <section class="telemetry-bar">
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">True Visual Uptime</span>
+          <span class="metric-badge green">OpenVINO Vision</span>
+        </div>
+        <div class="metric-value-row">
+          <div class="metric-big" id="metricUptime">100%</div>
+          <div class="metric-spark-container">
+            <div class="spark-bar" style="height: 60%"></div>
+            <div class="spark-bar" style="height: 80%"></div>
+            <div class="spark-bar" style="height: 75%"></div>
+            <div class="spark-bar" style="height: 90%"></div>
+            <div class="spark-bar" style="height: 100%"></div>
+          </div>
+        </div>
+        <div class="metric-sub" id="metricUptimeSub">Detecting visual errors beyond HTTP 200</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Monitored Fleet</span>
+          <span class="metric-badge blue">Cluster Health</span>
+        </div>
+        <div class="metric-value-row">
+          <div class="metric-big" id="metricTotalSites">5</div>
+          <div class="metric-status-dots">
+            <span class="status-pill green" id="pillOperational">3 Operational</span>
+            <span class="status-pill red" id="pillThreats">1 Threat</span>
+          </div>
+        </div>
+        <div class="metric-sub">Continuous neural watchdog active</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Brand Armor & Security</span>
+          <span class="metric-badge purple">NLP Typosquat Net</span>
+        </div>
+        <div class="metric-value-row">
+          <div class="metric-big" id="metricSecurityScore">Protected</div>
+          <div class="shield-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="metric-sub">Homoglyph & brand spoofing mitigation</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Intel® HW Acceleration</span>
+          <span class="metric-badge cyan" id="benchmarkFpsBadge">3,200+ FPS</span>
+        </div>
+        <div class="metric-value-row">
+          <div class="metric-big" id="metricSpeedup">214x Speedup</div>
+          <button class="btn-micro" id="quickBenchmarkBtn" title="Run OpenVINO Speed Test">Run Benchmark</button>
+        </div>
+        <div class="metric-sub" id="metricHwDetails">Intel Optimized Inference Runtime</div>
+      </div>
+    </section>
+
+    <!-- MAIN INTERACTIVE SECTION WITH TABS -->
+    <main class="main-content">
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="fleetTab">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          Domain Fleet & Visual Watchdog
+        </button>
+        <button class="tab-btn" data-tab="scannerTab">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Brand Armor & Typosquat Scanner
+        </button>
+        <button class="tab-btn" data-tab="inspectorTab">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Visual Defacement & Outage Simulator
+        </button>
+        <button class="tab-btn" data-tab="benchmarkTab">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+          Intel® OpenVINO™ Benchmark Suite
+        </button>
+      </div>
+
+      <!-- TAB 1: FLEET MONITOR -->
+      <div class="tab-pane active" id="fleetTab">
+        <div class="pane-header">
+          <div class="pane-title-group">
+            <h2 class="pane-title">Real-Time Domain Health & Visual Watchdog</h2>
+            <p class="pane-desc">OpenVINO evaluates both raw network telemetry and neural visual screen integrity to verify authentic website uptime.</p>
+          </div>
+          <div class="filter-controls">
+            <span class="filter-label">Filter:</span>
+            <button class="filter-chip active" data-filter="all">All (<span id="countAll">5</span>)</button>
+            <button class="filter-chip" data-filter="operational">Operational</button>
+            <button class="filter-chip" data-filter="threat">Threats & Errors</button>
+          </div>
+        </div>
+
+        <!-- SITE CARDS GRID -->
+        <div class="sites-grid" id="sitesGrid">
+          <!-- Dynamic Content rendered by JS -->
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Initializing OpenVINO Neural Watchdog...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: BRAND ARMOR & TYPOSQUAT SCANNER -->
+      <div class="tab-pane" id="scannerTab">
+        <div class="scanner-layout">
+          <div class="scanner-input-card">
+            <div class="section-badge purple">OpenVINO NLP Domain Classifier</div>
+            <h2 class="section-title">Brand Impersonation & Typosquatting Analyzer</h2>
+            <p class="section-desc">Detect deceptive lookalikes, homoglyph substitutions (e.g. <code>inte1</code> vs <code>intel</code>), high-risk TLDs, and brand phishing campaigns with OpenVINO neural embeddings.</p>
+
+            <form id="domainScanForm" class="scan-form">
+              <div class="input-with-button">
+                <input type="text" id="scanDomainInput" placeholder="e.g. inte1-security-login.xyz or github-token-verify.com" required>
+                <button type="submit" class="btn btn-primary" id="scanSubmitBtn">
+                  <span>Analyze Domain</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="quick-samples">
+              <span class="sample-label">Try Test Targets:</span>
+              <button class="sample-btn" data-domain="inte1-security-portal.xyz">inte1-security-portal.xyz</button>
+              <button class="sample-btn" data-domain="paypa1-update-account.cam">paypa1-update-account.cam</button>
+              <button class="sample-btn" data-domain="github-token-auth.top">github-token-auth.top</button>
+              <button class="sample-btn" data-domain="intel.com">intel.com (Authentic)</button>
+            </div>
+          </div>
+
+          <div class="scanner-results-card" id="scannerResults">
+            <div class="empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              <h3>Enter a domain to initiate OpenVINO neural risk scoring</h3>
+              <p>Evaluates lexical entropy, homoglyphs, brand distance, and malicious TLD patterns.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: VISUAL DEFACEMENT INSPECTOR & OUTAGE SIMULATOR -->
+      <div class="tab-pane" id="inspectorTab">
+        <div class="inspector-layout">
+          <div class="inspector-controls">
+            <div class="section-badge blue">OpenVINO Vision CNN</div>
+            <h2 class="section-title">True Visual Health & Defacement Simulator</h2>
+            <p class="section-desc">Test how OpenVINO instantly categorizes visual website states to catch silent defacements, broken renders, and 404/500 errors.</p>
+
+            <div class="sim-selector-group">
+              <label class="control-label">Select Simulated Visual State:</label>
+              <div class="sim-grid">
+                <button class="sim-btn active" data-state="healthy">
+                  <span class="sim-icon">✅</span>
+                  <span class="sim-text">Healthy Live UI</span>
+                </button>
+                <button class="sim-btn" data-state="error_500">
+                  <span class="sim-icon">⚠️</span>
+                  <span class="sim-text">500 Server Error</span>
+                </button>
+                <button class="sim-btn" data-state="error_404">
+                  <span class="sim-icon">🔍</span>
+                  <span class="sim-text">404 Not Found</span>
+                </button>
+                <button class="sim-btn" data-state="defaced">
+                  <span class="sim-icon">🚨</span>
+                  <span class="sim-text">Defacement / Hack</span>
+                </button>
+                <button class="sim-btn" data-state="cloudflare">
+                  <span class="sim-icon">🛡️</span>
+                  <span class="sim-text">Cloudflare / WAF Block</span>
+                </button>
+                <button class="sim-btn" data-state="maintenance">
+                  <span class="sim-icon">⏳</span>
+                  <span class="sim-text">Maintenance Mode</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="inspector-site-select">
+              <label class="control-label">Target Monitored Site:</label>
+              <select id="inspectorSiteSelect" class="form-select"></select>
+            </div>
+
+            <button id="runVisualInspectBtn" class="btn btn-primary btn-block">
+              <span>Execute OpenVINO Visual Inspection</span>
+            </button>
+          </div>
+
+          <div class="inspector-preview-panel" id="inspectorPreviewPanel">
+            <div class="preview-header">
+              <div class="preview-title">Visual Snapshot Render</div>
+              <div class="preview-meta" id="inspectDeviceTag">Target: Intel® OpenVINO™ CPU</div>
+            </div>
+            <div class="snapshot-canvas-container">
+              <img id="inspectSnapshotImg" src="" alt="Web Snapshot">
+            </div>
+            <div class="inspection-results-card" id="inspectResultsCard">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: BENCHMARK SUITE -->
+      <div class="tab-pane" id="benchmarkTab">
+        <div class="benchmark-container">
+          <div class="benchmark-header">
+            <div class="benchmark-badge">Intel® OpenVINO™ Performance Validation</div>
+            <h2 class="section-title">Hardware Acceleration & Throughput Benchmark</h2>
+            <p class="section-desc">Demonstrates the real-world inference speedup achieved by compiling models with Intel OpenVINO runtime vs standard unoptimized execution.</p>
+          </div>
+
+          <div class="benchmark-controls-card">
+            <div class="iter-row">
+              <label for="benchmarkIters">Iterations:</label>
+              <select id="benchmarkIters" class="form-select form-select-sm">
+                <option value="30">30 Runs (Fast)</option>
+                <option value="50" selected>50 Runs (Standard)</option>
+                <option value="100">100 Runs (Deep)</option>
+              </select>
+              <button id="startBenchmarkBtn" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <span>Run Intel OpenVINO Benchmark</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="benchmark-results-grid" id="benchmarkResultsGrid">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ADD SITE MODAL -->
+    <div class="modal-overlay" id="addSiteModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Monitor New Domain</h3>
+          <button class="modal-close" id="closeModalBtn">&times;</button>
+        </div>
+        <form id="addSiteForm">
+          <div class="form-group">
+            <label for="newDomainInput">Domain Name or URL *</label>
+            <input type="text" id="newDomainInput" placeholder="e.g. mycompany.com or api.service.io" required>
+          </div>
+          <div class="form-group">
+            <label for="newNameInput">Friendly Name</label>
+            <input type="text" id="newNameInput" placeholder="e.g. Production API Gateway">
+          </div>
+          <div class="form-group">
+            <label for="newCategoryInput">Category</label>
+            <select id="newCategoryInput" class="form-select">
+              <option value="Production Web">Production Web</option>
+              <option value="API & Microservice">API & Microservice</option>
+              <option value="Developer Platform">Developer Platform</option>
+              <option value="Security / Honeypot">Security / Honeypot</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelModalBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add to Watchdog</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="toast-container"></div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
